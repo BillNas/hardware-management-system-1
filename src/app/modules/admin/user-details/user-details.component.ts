@@ -8,11 +8,11 @@ import { TranslateModule } from '@ngx-translate/core';3
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { EditUserComponent } from '../../../components/admin-components/edit-user/edit-user.component';
-
+import { MatChipsModule } from '@angular/material/chips';
 @Component({
   selector: 'app-user-details',
   standalone: true,
-  imports: [CommonModule, MatButtonModule,TranslateModule,MatCardModule,RouterModule],
+  imports: [CommonModule, MatButtonModule,MatChipsModule,TranslateModule,MatCardModule,RouterModule],
   templateUrl: './user-details.component.html',
   styleUrls: ['./user-details.component.scss']
 })
@@ -35,14 +35,20 @@ export class UserDetailsComponent implements OnInit {
     }
 
     if (!this.user) {
-      console.error('User not found');
+      console.error('Δεν βρέθηκε ο χρήστης');
     }
   }
 
   openEditUserDialog(): void {
     if (this.user) {
-      this.dialog.open(EditUserComponent, {
+      const dialogRef = this.dialog.open(EditUserComponent, {
         data: { user: this.user }
+      });
+  
+      dialogRef.afterClosed().subscribe(result => {
+        if (result && result.success && result.updatedUser) {
+          this.user = result.updatedUser;
+        }
       });
     }
   }

@@ -41,6 +41,8 @@ import { AddAunitDialogComponent } from '../../../components/admin-components/ad
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { Utils } from '../../../shared/utils';
 import { AuthStateService } from '../../../services/state-management/auth-state.service';
+import { EditAunitDialogComponent } from '../../../components/admin-components/edit-aunit-dialog/edit-aunit-dialog.component';
+import { MenuItem } from 'primeng/api';
 
 @Component({
   selector: 'app-carrier-detail',
@@ -90,6 +92,12 @@ export class CarrierDetailComponent implements OnInit {
   hasMultipleCarriers = this.authStateService.hasMultipleCarriers();
   dataSource = new MatTableDataSource<Device>(this.filteredResults);
   workstationDataSource = new MatTableDataSource<WorkStation>(this.workstations);
+  menuItems: MenuItem[] = [];
+  currentFilterParams: any = {};
+
+  currentPage: number = 1;
+  pageSize: number = 30;
+  totalPages: number = 1;
 
   constructor(
     private router: Router,
@@ -110,7 +118,7 @@ export class CarrierDetailComponent implements OnInit {
     private utils: Utils
   ) {
     this.searchForm = this.fb.group({
-      ram: [0]
+      ram: ['']
     });
     this.isSuperAdmin = this.authStateService.isSuperAdmin();
     if (!this.isSuperAdmin && !this.hasMultipleCarriers) {
@@ -120,12 +128,22 @@ export class CarrierDetailComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    
     const carrier = this.carrierStateService.selectedCarrier();
     if (carrier) {
       this.carrier = carrier;
 
       this.fetchAUnits(carrier.id);
 
+    }
+    this.checkSearchFormState();
+  }
+
+  checkSearchFormState(): void {
+    const savedState = localStorage.getItem('searchFormState');
+    if (savedState) {
+      this.showForm = true;
+      this.showSearchOptions = true;
     }
   }
 
@@ -147,11 +165,9 @@ export class CarrierDetailComponent implements OnInit {
   }
 
   onSearch(term: string): void {
-    if (this.searchType === DeviceType.COMPUTER || this.searchType === DeviceType.PHONE || this.searchType === DeviceType.PRINTER) {
-      this.filteredResults = term ? Helper.filterDevices(term, this.devices) : this.devices;
-    } else if (this.searchType === DeviceType.WORKSTATION) {
-      this.filteredResults = term ? Helper.filterWorkStations(term, this.workstations) : this.workstations;
-    }
+    this.filteredResults = this.searchType !== DeviceType.WORKSTATION 
+      ? (term ? Helper.filterDevices(term, this.devices) : this.devices)
+      : (term ? Helper.filterWorkStations(term, this.workstations) : this.workstations);
   }
 
   onDeleteUnit(unit: CommonResponse): void {
@@ -174,30 +190,27 @@ export class CarrierDetailComponent implements OnInit {
   }
 
 
-  openUnitDialog(unit?: CommonResponse): void {
+  openAddUnitDialog(): void {
     const dialogRef = this.dialog.open(AddAunitDialogComponent, {
       width: '500px',
-      data: { unitName: unit ? unit.name : '' }
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result && result.isConfirmed) {
-        const unitName = result.value?.unitName;
-        if (unitName) {
-          if (unit && unit.id) {
-            this.utils.updateAUnit(unit.id, unitName, this.aUnits, (success, updatedUnits) => {
-              if (success) {
-                this.aUnits = updatedUnits;
-              }
-            });
-          } else if (this.carrier?.id) {
-            this.utils.addAUnit(this.carrier.id, unitName, (success) => {
-              if (success) {
-                this.fetchAUnits(this.carrier!.id);
-              }
-            });
-          }
-        }
+        this.fetchAUnits(this.carrier!.id);
+      }
+    });
+  }
+
+  openEditUnitDialog(unit: CommonResponse): void {
+    const dialogRef = this.dialog.open(EditAunitDialogComponent, {
+      width: '500px',
+      data: { unitName: unit.name, unitId: unit.id },
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result && result.isConfirmed) {
+        this.fetchAUnits(this.carrier!.id);
       }
     });
   }
@@ -210,7 +223,7 @@ export class CarrierDetailComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.utils.addWorkStation(result.aUnitId, result as WorkstationRequest, (success, id) => {
+        this.utils.addWorkStation(result.aUnitId, result.departmentId, result as WorkstationRequest, (success, id) => {
           if (success && id) {
             this.openSnackBar(this.translate.instant('successMessages.workstation.added.successfully'), 'Προβολή', id);
           }
@@ -274,10 +287,14 @@ export class CarrierDetailComponent implements OnInit {
       return;
     }
 
+    this.currentFilterParams = searchParams;
+
     switch (this.searchType) {
       case DeviceType.COMPUTER:
       case DeviceType.PHONE:
       case DeviceType.PRINTER:
+      case DeviceType.NETWORK_EQUIPMENT:
+      case DeviceType.SERVER:
         this.searchForDevices(searchParams);
         break;
       case DeviceType.WORKSTATION:
@@ -288,20 +305,60 @@ export class CarrierDetailComponent implements OnInit {
     }
   }
 
+  nextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+      this.searchDevices(this.currentFilterParams);
+    }
+  }
+
+  previousPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.searchDevices(this.currentFilterParams);
+    }
+  }
+
+  firstPage(): void {
+    if (this.currentPage !== 1) {
+      this.currentPage = 1;
+      this.searchDevices(this.currentFilterParams);
+    }
+  }
+
+  lastPage(): void {
+    if (this.currentPage !== this.totalPages) {
+      this.currentPage = this.totalPages;
+      this.searchDevices(this.currentFilterParams);
+    }
+  }
+
   private searchForDevices(searchParams: any): void {
-    this.deviceService.getDevicesByCarrierId(this.carrierStateService.selectedCarrier()!.id, this.searchType, searchParams).subscribe(response => {
+    this.deviceService.getDevicesByCarrierId(
+      this.carrierStateService.selectedCarrier()!.id,
+      this.currentPage,
+      this.pageSize,
+      this.searchType,
+      searchParams
+    ).subscribe(response => {
       if (response.success) {
         this.devices = response.data || [];
         this.filteredResults = this.devices;
+        this.totalPages = response.totalPages;
       }
     });
   }
-
   private searchForWorkstations(searchParams: any): void {
-    this.workStationService.getWorkStationsByCarrierId(this.carrierStateService.selectedCarrier()!.id, searchParams).subscribe((response: WorkStationResponse) => {
+    this.workStationService.getWorkStationsByCarrierId(
+      this.carrierStateService.selectedCarrier()!.id,
+      this.currentPage,
+      this.pageSize,
+      searchParams
+    ).subscribe((response: WorkStationResponse) => {
       if (response.success) {
         this.workstations = response.data || [];
         this.filteredResults = this.workstations;
+        this.totalPages = response.totalPages;
       }
     });
   }

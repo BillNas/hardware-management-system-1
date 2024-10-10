@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AunitDetailComponent } from './aunit-detail.component';
+import { EditAunitDialogComponent } from './edit-aunit-dialog.component';
 
-describe('AunitDetailComponent', () => {
-  let component: AunitDetailComponent;
-  let fixture: ComponentFixture<AunitDetailComponent>;
+describe('EditAunitDialogComponent', () => {
+  let component: EditAunitDialogComponent;
+  let fixture: ComponentFixture<EditAunitDialogComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AunitDetailComponent]
+      imports: [EditAunitDialogComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(AunitDetailComponent);
+    fixture = TestBed.createComponent(EditAunitDialogComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

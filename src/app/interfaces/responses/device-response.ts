@@ -1,3 +1,4 @@
+import {  OperatingSystem, PhoneType, ServerDiskType } from "../requests/device-request";
 import { CommonResponse } from "./common-response";
 import { WorkStation } from "./workstation-response";
 
@@ -15,33 +16,78 @@ export interface PrinterType {
   id: number;
   name: string;
 }
-export interface NetworkEquipmentType{
+
+export interface ServerDiskResponse {
+  id: number;
+  capacity: string;
+  diskRotations: string;
+  serverDiskType: ServerDiskType;
+  networkDiskInfo?: NetworkDiskInfo | null;
+}
+
+export interface NetworkDiskInfo {
+  name: string;
+  diskArray: string;
+  ip: string;
+  brand: string;
+  supplier: string;
+  purchaseDate: string;
+}
+
+export interface NetworkEquipmentType {
   id: number;
   name: string;
 }
 
+export interface ComputerPrinter{
+  id: number;
+  typeId: number;
+  ipAddress?: string;
+}
+
+
 export interface RemoteDesktopApp {
+  name: string;
   typeId: number;
   userId: string;
   password: string;
 }
+
+export interface NetworkEquipmentIpResponse{
+  id: number;
+  ip: string;
+  name: string;
+}
+
 
 export interface Device {
   id: number;
   model: string;
   serialNumber: string;
   deviceName: string;
-  ram?: number;
+  ram?: string;
   ip?: string;
   phoneNumber?: string;
   disks?: Disk[];
   printerType?: PrinterType;
+  phoneType?:PhoneType;
   networkEquipmentType?: NetworkEquipmentType;
+  networkEquipmentIP?: NetworkEquipmentIpResponse;
   floor?: string;
   workGroupDomain?: string;
+  refurbished?: boolean;
+  networkEquipmentFloor?: string;
+  serverDiskType?: ServerDiskType;
+  paperSize?: string;
   macAddress?: string;
+  toBeDestroyed?:boolean;
   machineType?: string;
-  operatingSystem?: string;
+  printerIp?: string;
+  routerPassword?: string;
+  routerUsername?: string;
+  operatingSystem?: OperatingSystem
+  computerPrinters?: ComputerPrinter[]
+  netWorkDisk?:boolean;
   monitorType?: string;
   outlet?: string;
   antivirus?: string;
@@ -51,7 +97,9 @@ export interface Device {
   aUnit: CommonResponse;
   carrier: CommonResponse;
   workStation?: WorkStation;
-  comments?: string;  
+  networkDiskInfo?: NetworkDiskInfo;
+  comments?: string;
+  serverDisks?: ServerDiskResponse[];
 }
 
 export interface SingleDeviceResponse {
@@ -60,8 +108,9 @@ export interface SingleDeviceResponse {
   message: string;
 }
 
+
 export interface DeviceHistory {
-  ram?: number;
+  ram?: string;
   id: number;
   username: string;
   employeeLastName: string;
@@ -72,11 +121,14 @@ export interface DeviceHistory {
   model: string;
   serialNumber: string;
   actionType: ActionType;
-  
+  paperSize?: string;
   checkDateTime: string;
   comments: string;
+  printerIp?: string;
   ip?: string;
   macAddress?: string;
+  operatingSystemId?: number;
+  toBeDestroyed?:boolean;
   operatingSystem?: string;
   monitorType?: string;
   outlet?: string;

@@ -17,7 +17,8 @@
         <mat-icon>person_add</mat-icon>
         <span>{{ 'create.user' | translate }}</span>
       </button>
-      <button mat-flat-button color="accent" (click)="toggleUsersList()" matTooltip="{{ 'view.all.users' | translate }}">
+      <button mat-flat-button color="accent" (click)="toggleUsersList()"
+        matTooltip="{{ 'view.all.users' | translate }}">
         <mat-icon>supervisor_account</mat-icon>
         <span>{{ 'view.all.users' | translate }}</span>
       </button>
@@ -29,20 +30,40 @@
         <mat-icon>domain</mat-icon>
         <span>{{ 'create.aUnit' | translate }}</span>
       </button>
+      <button mat-flat-button color="accent" [matMenuTriggerFor]="munOfficesMenu" matTooltip="Διευθύνσεις">
+        <mat-icon>account_balance</mat-icon>
+        <span>Διευθύνσεις</span>
+      </button>
+      <button mat-flat-button color="accent" [matMenuTriggerFor]="depsMenu" [disabled]="!selectedCarrierId"
+        [matTooltip]="!selectedCarrierId ? 'Πρέπει να επιλέξετε πρώτα μια διευθυνση' : ''" matTooltipPosition="above"
+        [ngStyle]="{'background-color': !selectedCarrierId ? '#b0b0b0' : '', 'color': !selectedCarrierId ? '#ffffff' : ''}">
+        <mat-icon>category</mat-icon>
+        <span>Τμήματα</span>
+      </button>
       <button mat-flat-button color="accent" (click)="addWorkstation()" matTooltip="{{ 'create.carrier' | translate }}">
         <mat-icon>add_circle</mat-icon>
         <span>{{ 'create.workstation' | translate }}</span>
+      </button>
+      <button mat-flat-button color="accent" (click)="addDropDownOptions()"
+        matTooltip="{{ 'dropdown.options' | translate }}">
+        <mat-icon>arrow_drop_down_circle</mat-icon>
+        <span>{{ 'dropdown.options' | translate }}</span>
+      </button>
+      <button mat-flat-button color="accent" (click)="showOperatingSystems()"
+        matTooltip="{{ 'operatingSystems' | translate }}">
+        <mat-icon>desktop_windows</mat-icon>
+        <span>{{ 'operatingSystems' | translate }}</span>
       </button>
     </div>
   </mat-sidenav>
 
   <mat-sidenav-content class="main-content">
     <div class="col-md-1">
-    <mat-toolbar color="primary" class="header-toolbar">
-      <button mat-icon-button (click)="toggleDrawer()">
-        <mat-icon class="sidebar-icon">{{ !isDrawerOpen ? 'close' : 'menu' }}</mat-icon>
-      </button>
-    </mat-toolbar>
+      <mat-toolbar color="primary" class="header-toolbar">
+        <button mat-icon-button (click)="toggleDrawer()">
+          <mat-icon class="sidebar-icon">{{ isDrawerOpen ? 'menu' : 'close' }}</mat-icon>
+        </button>
+      </mat-toolbar>
     </div>
 
     <div class="content-container">
@@ -55,7 +76,7 @@
           <mat-icon>computer</mat-icon> {{ 'all.computers' | translate }}
         </button>
         <button mat-menu-item (click)="fetchAllDevices(DeviceType.PHONE)">
-          <mat-icon>phone_iphone</mat-icon> {{ 'all.phones' | translate }}
+          <mat-icon>phone</mat-icon> {{ 'all.phones' | translate }}
         </button>
         <button mat-menu-item (click)="fetchAllDevices(DeviceType.PRINTER)">
           <mat-icon>printer</mat-icon> {{ 'all.printers' | translate }}
@@ -63,13 +84,39 @@
         <button mat-menu-item (click)="fetchAllDevices(DeviceType.NETWORK_EQUIPMENT)">
           <mat-icon>router</mat-icon> {{ 'all.net_equipment' | translate }}
         </button>
+        <button mat-menu-item (click)="fetchAllDevices(DeviceType.SERVER)">
+          <mat-icon>storage</mat-icon> {{ 'all.servers' | translate }}
+        </button>
       </mat-menu>
+
+      <mat-menu #munOfficesMenu="matMenu">
+        <button mat-menu-item (click)="toggleOfficesTable()">
+          <mat-icon>account_balance</mat-icon> Όλες οι διευθύνσεις
+        </button>
+        <button mat-menu-item (click)="addMunicipalOffice()">
+          <mat-icon>library_add</mat-icon>Δημιουργία Διεύθυνσης
+        </button>
+      </mat-menu>
+
+      <mat-menu #depsMenu="matMenu">
+        <button mat-menu-item (click)="toggleDepartmentsTable()">
+          <mat-icon>account_balance</mat-icon> Όλα τα τμήματα
+        </button>
+        <button mat-menu-item (click)="addDepartment()">
+          <mat-icon>library_add</mat-icon>Δημιουργία τμήματος
+        </button>
+      </mat-menu>
+
+
       <app-carrier-table *ngIf="showCarriers"></app-carrier-table>
       <app-users-table *ngIf="showUsersTable"></app-users-table>
+      <app-departments-table [departments]="departments" *ngIf="showDepartmentsTable"></app-departments-table>
+      <app-mun-offices-table [municipalOffices]="munOffices" *ngIf="showOfficesTable"></app-mun-offices-table>
 
       <div class="device-list">
         <div class="export-button-container" *ngIf="devices.length > 0 || workstations.length > 0">
-          <app-export-data-button [data]="devices.length > 0 ? devices : workstations" fileName="admin-report" [columnNames]="columnNames">
+          <app-export-data-button [data]="devices.length > 0 ? devices : workstations" fileName="admin-report"
+            [columnNames]="columnNames">
           </app-export-data-button>
         </div>
         <div class="all-devices-text" *ngIf="devices.length > 0">
@@ -79,11 +126,15 @@
           <mat-icon *ngIf="searchType === DeviceType.PRINTER">print</mat-icon>
           <mat-icon *ngIf="searchType === DeviceType.NETWORK_EQUIPMENT">router</mat-icon>
         </div>
-        <div class="all-devices-text" *ngIf="workstations.length > 0">{{ 'all.workstations' | translate }}</div>
-        <app-filter [filterType]="filterType" [carriers]="carriers" *ngIf="this.showFilter" (filter)="applyFilter($event)"></app-filter>
+        <div class="all-devices-text" *ngIf="filteredWorkstations.length > 0">{{ 'all.workstations' | translate }}</div>
+        <app-filter [filterType]="filterType" [carriers]="carriers" [offices]="municipalOfficesForFilter" [departments]="departments"
+          *ngIf="this.showFilter" (pageSizeChange)="onPageSizeChange($event)" (filter)="applyFilter($event)"></app-filter>
         <div class="row">
-          <app-item-table *ngIf="devices.length > 0" [items]="devices" [deviceType]="searchType"></app-item-table>
-          <app-item-table *ngIf="workstations.length > 0" [items]="workstations" [deviceType]="searchType"></app-item-table>
+          <app-item-table *ngIf="devices.length > 0 || filteredWorkstations.length > 0"
+            [items]="devices.length > 0 ? devices : filteredWorkstations" [deviceType]="searchType"
+            [isSuperAdmin]="isSuperAdmin" [currentPage]="currentPage" [totalPages]="totalPages" (nextPage)="nextPage()"
+            (previousPage)="previousPage()" (firstPage)="firstPage()" (lastPage)="lastPage()">
+          </app-item-table>
         </div>
       </div>
     </div>

@@ -239,7 +239,6 @@ export class FilterComponent implements OnInit, OnChanges {
       });
 
       const filterKey = this.getSpecificFilterKey(this.filterType);
-      console.log(filterKey)
 
       this.filter.emit({ carrierId, aUnitId,departmentId,municipalOfficeId, [filterKey]: filterDto });
     }
